@@ -1,0 +1,20 @@
+{% for recipe in recipes %}
+<div class="col-md-4 mb-4">
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">{{ recipe.title }}</h5>
+            <p class="card-text">
+                {% for tag in recipe.tags.all %}
+                <span class="badge bg-secondary">{{ tag.name }}</span>
+                {% endfor %}
+            </p>
+            <a href="{% url 'recipes:detail' recipe.pk %}" class="btn btn-sm btn-info">View</a>
+            <a href="{% url 'recipes:update' recipe.pk %}" class="btn btn-sm btn-warning">Edit</a>
+        </div>
+    </div>
+</div>
+{% empty %}
+<div class="col-12">
+    <p>No recipes found. Create your first recipe!</p>
+</div>
+{% endfor %}

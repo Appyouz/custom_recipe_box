@@ -1,28 +1,112 @@
 {% extends 'accounts/base.html' %}
 {% block content %}
 <div class="container mt-4">
-    <h2>Your Recipes</h2>
-    <a href="{% url 'recipes:create' %}" class="btn btn-primary mb-3">Create New Recipe</a>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Your Recipes</h2>
+        <a href="{% url 'recipes:create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> New Recipe
+        </a>
+    </div>
     
-    <div class="row">
-        {% for recipe in recipes %}
-        <div class="col-md-4 mb-4">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">{{ recipe.title }}</h5>
-                    <p class="card-text">
-                        Tags: {% for tag in recipe.tags.all %}<span class="badge bg-secondary">{{ tag.name }}</span> {% endfor %}
-                    </p>
-                    <a href="{% url 'recipes:detail' recipe.pk %}" class="btn btn-sm btn-info">View</a>
-                    <a href="{% url 'recipes:update' recipe.pk %}" class="btn btn-sm btn-warning">Edit</a>
-                </div>
-            </div>
+    <!-- Search Box -->
+    <div class="input-group mb-4">
+        <span class="input-group-text">
+            <i class="bi bi-search"></i>
+        </span>
+        <input type="text" 
+               class="form-control" 
+               id="searchInput"
+               placeholder="Search recipes by title, ingredient, or tag..."
+               aria-label="Search recipes">
+    </div>
+    
+    <!-- Loading Indicator -->
+    <div id="loading" class="text-center mb-3" style="display: none;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
         </div>
-        {% empty %}
-        <div class="col-12">
-            <p>No recipes found. Create your first recipe!</p>
-        </div>
-        {% endfor %}
+    </div>
+
+    <!-- Recipe List -->
+    <div id="recipeList" class="row">
+        {% include 'recipes/partials/recipe_list.html' %}
     </div>
 </div>
+
+<!-- Add Bootstrap Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const recipeList = document.getElementById('recipeList');
+    const loading = document.getElementById('loading');
+    let timeout = null;
+
+    // Debounce function to prevent rapid API calls
+    function debounce(func, delay) {
+        clearTimeout(timeout);
+        timeout = setTimeout(func, delay);
+    }
+
+    async function performSearch(query) {
+        try {
+            loading.style.display = 'block';
+            const response = await fetch(`{% url 'recipes:search_api' %}?q=${encodeURIComponent(query)}`);
+            const data = await response.json();
+            
+            // Update recipe list
+            recipeList.innerHTML = data.results.map(recipe => `
+                <div class="col-md-4 mb-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">${recipe.title}</h5>
+                            <p class="card-text">
+                                ${recipe.tags.map(tag => `
+                                    <span class="badge bg-secondary">${tag}</span>
+                                `).join(' ')}
+                            </p>
+                            <a href="${recipe.url}" class="btn btn-sm btn-info">View</a>
+                            <a href="{% url 'recipes:update' 0 %}".replace('0', recipe.id) 
+                               class="btn btn-sm btn-warning">Edit</a>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            if (data.results.length === 0) {
+                recipeList.innerHTML = `
+                    <div class="col-12 text-center text-muted">
+                        No recipes found matching "${query}"
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Search error:', error);
+        } finally {
+            loading.style.display = 'none';
+        }
+    }
+
+    // Event listeners
+    searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.trim();
+        debounce(() => {
+            if (query.length > 0) {
+                performSearch(query);
+            } else {
+                // Reload initial list
+                fetch("{% url 'recipes:list' %}")
+                    .then(response => response.text())
+                    .then(html => {
+                        recipeList.innerHTML = 
+                            new DOMParser()
+                            .parseFromString(html, 'text/html')
+                            .getElementById('recipeList').innerHTML;
+                    });
+            }
+        }, 300);
+    });
+});
+</script>
 {% endblock %}

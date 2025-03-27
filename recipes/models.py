@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-from django.db.models.manager import Manager
+from django.urls import reverse
 
 class Tag(models.Model):
     name = models.CharField(max_length=50, unique=True)
@@ -8,8 +8,12 @@ class Tag(models.Model):
     def __str__(self):
         return self.name
 
+    def get_absolute_url(self):
+        return reverse('recipes:detail', kwargs={'pk': self.pk})
+
 
 class Recipe(models.Model):
+    id = models.AutoField(primary_key=True)  # Add this line
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     title = models.CharField(max_length=200)
     ingredients = models.TextField()
@@ -18,6 +22,8 @@ class Recipe(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def get_absolute_url(self):
+        return reverse('recipes:detail', kwargs={'pk': self.pk})
     def __str__(self):
         return self.title
 

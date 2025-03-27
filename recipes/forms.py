@@ -1,9 +1,13 @@
 from django import forms
 from .models import Tag, Recipe, MealPlan
 from django.contrib.auth import get_user_model
-from django.db.models import Q  
+from django.db.models import Q
+import datetime
+
+from typing import cast
 
 User = get_user_model()
+
 
 class RecipeForm(forms.ModelForm):
     tags = forms.ModelMultipleChoiceField(
@@ -18,31 +22,32 @@ class RecipeForm(forms.ModelForm):
             "instructions": forms.Textarea(attrs={"rows": 5}),
         }
 
+
 class MealPlanForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
-        user = kwargs.pop('user', None)
+        user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
-        if user:
-            # Only show recipes belonging to the current user
-            self.fields['recipe'].queryset = Recipe.objects.filter(user=user)
-            # Set default date to today
-            self.fields['date'].initial = forms.DateInput().value_from_datadict(
-                {'date': 'today'}, {}, 'date'
-            )
+        # Only show recipes belonging to the current user
+        if "recipe" in self.fields:
+            # Explicitly cast to ModelChoiceField to satisfy Pyright
+            recipe_field = cast(forms.ModelChoiceField, self.fields["recipe"])
+            if user:
+                recipe_field.queryset = Recipe.objects.filter(user=user)
+        # Set default date to today
+        self.fields["date"].initial = datetime.date.today()
 
     class Meta:
         model = MealPlan
-        fields = ['recipe', 'day', 'date']
+        fields = ["recipe", "day", "date"]
         widgets = {
-            'date': forms.DateInput(attrs={
-                'type': 'date',
-                'class': 'form-control datepicker'
-            }),
-            'recipe': forms.Select(attrs={
-                'class': 'form-control select2-search',
-                'data-placeholder': 'Search recipes...'
-            }),
-            'day': forms.Select(attrs={
-                'class': 'form-control'
-            }),
+            "date": forms.DateInput(
+                attrs={"type": "date", "class": "form-control datepicker"}
+            ),
+            "recipe": forms.Select(
+                attrs={
+                    "class": "form-control select2-search",
+                    "data-placeholder": "Search recipes...",
+                }
+            ),
+            "day": forms.Select(attrs={"class": "form-control"}),
         }

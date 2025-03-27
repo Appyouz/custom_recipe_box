@@ -1,14 +1,22 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from .models import Recipe, Tag, MealPlan
+from .models import Recipe, MealPlan
 from .forms import RecipeForm, MealPlanForm
 from django.db.models import Q
-
+from django.http import HttpRequest, JsonResponse
+from django.db.models import QuerySet
 
 @login_required
 def recipe_list(request):
     recipes = Recipe.objects.filter(user=request.user)
-    return render(request, 'recipes/list.html', {'recipes': recipes})
+
+    if request.headers.get("HX-Request"):
+        return render(
+            request, "recipes/partials/recipe_list.html", {"recipes": recipes}
+        )
+
+    return render(request, "recipes/list.html", {"recipes": recipes})
+
 
 @login_required
 def recipe_create(request):
@@ -23,8 +31,8 @@ def recipe_create(request):
     else:
         form = RecipeForm()
     return render(
-            request, "recipes/form.html", {"form": form, "title": "Create Recipe"}
-        )
+        request, "recipes/form.html", {"form": form, "title": "Create Recipe"}
+    )
 
 
 @login_required
@@ -76,23 +84,36 @@ def meal_plan(request):
     )
 
 
+
 @login_required
-def recipe_search(request):
-    query = request.GET.get("q")
-    results = Recipe.objects.filter(user=request.user)
+def recipe_search_api(request: HttpRequest) -> JsonResponse:
+    query = request.GET.get("q", "")
+    # recipes = Recipe.objects.filter(user=request.user)
+    recipes: QuerySet[Recipe] = Recipe.objects.filter(user=request.user)
 
     if query:
-        results = results.filter(
+        recipes = recipes.filter(
             Q(title__icontains=query)
             | Q(ingredients__icontains=query)
             | Q(tags__name__icontains=query)
         ).distinct()
 
-    return render(request, "recipes/search.html", {"results": results, "query": query})
+    data = [
+        {
+            "id": recipe.id,
+            "title": recipe.title,
+            "tags": [tag.name for tag in recipe.tags.all()],
+            "url": recipe.get_absolute_url(),
+        }
+        for recipe in recipes
+    ]
+
+    return JsonResponse({"results": data})
+
 
 @login_required
 def meal_plan_delete(request, pk):
     meal_plan = get_object_or_404(MealPlan, pk=pk, user=request.user)
-    if request.method == 'POST':
+    if request.method == "POST":
         meal_plan.delete()
-    return redirect('recipes:meal_plan')
+    return redirect("recipes:meal_plan")
