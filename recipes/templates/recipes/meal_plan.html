@@ -1,0 +1,44 @@
+{% extends 'accounts/base.html' %}
+{% load crispy_forms_tags %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Meal Planner</h2>
+    
+    <div class="row">
+        <div class="col-md-4">
+            <h4>Add to Meal Plan</h4>
+            <form method="post">
+                {% csrf_token %}
+                {{ form|crispy }}
+                <button type="submit" class="btn btn-primary">Add</button>
+            </form>
+        </div>
+        
+        <div class="col-md-8">
+            <h4>Current Meal Plan</h4>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Day</th>
+                        <th>Recipe</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for plan in meal_plans %}
+                    <tr>
+                        <td>{{ plan.date }}</td>
+                        <td>{{ plan.get_day_display }}</td>
+                        <td>{{ plan.recipe.title }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3">No meals planned yet</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
