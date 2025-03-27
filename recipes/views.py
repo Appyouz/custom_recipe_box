@@ -67,10 +67,10 @@ def meal_plan(request):
             meal_plan.save()
             return redirect("recipes:meal_plan")
     else:
-        form = MealPlanForm()
+        form = MealPlanForm(user=request.user)
 
     # Show current week's meal plan
-    meal_plans = MealPlan.objects.filter(user=request.user)
+    meal_plans = MealPlan.objects.filter(user=request.user).order_by("date")
     return render(
         request, "recipes/meal_plan.html", {"form": form, "meal_plans": meal_plans}
     )
@@ -89,3 +89,10 @@ def recipe_search(request):
         ).distinct()
 
     return render(request, "recipes/search.html", {"results": results, "query": query})
+
+@login_required
+def meal_plan_delete(request, pk):
+    meal_plan = get_object_or_404(MealPlan, pk=pk, user=request.user)
+    if request.method == 'POST':
+        meal_plan.delete()
+    return redirect('recipes:meal_plan')
